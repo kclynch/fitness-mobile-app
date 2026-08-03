@@ -12,7 +12,6 @@ import androidx.glance.LocalContext
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
-import androidx.glance.appwidget.CheckBox
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
@@ -29,8 +28,10 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
+import androidx.glance.text.TextDecoration
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.kclynch.fitness90.MainActivity
@@ -155,17 +156,35 @@ private fun ChallengeContent(
             LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
                 items(tasks, itemId = { it.id }) { task ->
                     val isChecked = checkedIds.contains(task.id)
-                    CheckBox(
-                        checked = isChecked,
-                        onCheckedChange = actionRunCallback<ToggleTaskAction>(
-                            actionParametersOf(
-                                taskIdKey to task.id,
-                                dayNumberKey to dayNumber
-                            )
-                        ),
-                        text = task.title,
-                        modifier = GlanceModifier.fillMaxWidth().padding(vertical = 4.dp)
-                    )
+                    Row(
+                        modifier = GlanceModifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp)
+                            .clickable(
+                                actionRunCallback<ToggleTaskAction>(
+                                    actionParametersOf(
+                                        taskIdKey to task.id,
+                                        dayNumberKey to dayNumber
+                                    )
+                                )
+                            ),
+                        verticalAlignment = Alignment.Vertical.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isChecked) "☑" else "☐",
+                            style = TextStyle(fontSize = 18.sp, color = ColorProvider(GreenPrimary))
+                        )
+                        Spacer(modifier = GlanceModifier.width(8.dp))
+                        Text(
+                            text = task.title,
+                            style = TextStyle(
+                                fontSize = 14.sp,
+                                color = ColorProvider(GreenPrimary),
+                                textDecoration = if (isChecked) TextDecoration.LineThrough else TextDecoration.None
+                            ),
+                            modifier = GlanceModifier.defaultWeight()
+                        )
+                    }
                 }
             }
         }
