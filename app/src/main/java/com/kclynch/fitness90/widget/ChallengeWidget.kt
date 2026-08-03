@@ -16,8 +16,6 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
-import androidx.glance.appwidget.lazy.LazyColumn
-import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -153,8 +151,8 @@ private fun ChallengeContent(
                 style = TextStyle(fontSize = 13.sp, color = ColorProvider(GreenPrimary))
             )
         } else {
-            LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
-                items(tasks, itemId = { it.id }) { task ->
+            Column(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
+                tasks.take(MAX_VISIBLE_TASKS).forEach { task ->
                     val isChecked = checkedIds.contains(task.id)
                     Row(
                         modifier = GlanceModifier
@@ -186,7 +184,15 @@ private fun ChallengeContent(
                         )
                     }
                 }
+                if (tasks.size > MAX_VISIBLE_TASKS) {
+                    Text(
+                        text = "+${tasks.size - MAX_VISIBLE_TASKS} more in app",
+                        style = TextStyle(fontSize = 12.sp, color = ColorProvider(GreenPrimary))
+                    )
+                }
             }
         }
     }
 }
+
+private const val MAX_VISIBLE_TASKS = 8
