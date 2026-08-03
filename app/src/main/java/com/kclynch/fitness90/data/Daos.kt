@@ -43,6 +43,9 @@ interface DayCheckDao {
     @Query("SELECT * FROM day_checks")
     fun observeAllChecks(): Flow<List<DayCheck>>
 
+    @Query("SELECT * FROM day_checks WHERE taskId = :taskId AND dayNumber = :dayNumber LIMIT 1")
+    suspend fun find(taskId: Long, dayNumber: Int): DayCheck?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(check: DayCheck)
 }

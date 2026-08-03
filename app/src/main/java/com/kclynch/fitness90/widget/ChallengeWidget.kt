@@ -42,7 +42,6 @@ import kotlinx.coroutines.flow.first
 
 val taskIdKey = ActionParameters.Key<Long>("taskId")
 val dayNumberKey = ActionParameters.Key<Int>("dayNumber")
-val newCheckedKey = ActionParameters.Key<Boolean>("newChecked")
 
 private val GreenPrimary = Color(0xFF2E7D32)
 private val GreenContainer = Color(0xFFDCEDC8)
@@ -161,8 +160,7 @@ private fun ChallengeContent(
                         onCheckedChange = actionRunCallback<ToggleTaskAction>(
                             actionParametersOf(
                                 taskIdKey to task.id,
-                                dayNumberKey to dayNumber,
-                                newCheckedKey to !isChecked
+                                dayNumberKey to dayNumber
                             )
                         ),
                         text = task.title,

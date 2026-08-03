@@ -50,6 +50,16 @@ class ChallengeRepository(private val db: AppDatabase) {
         db.dayCheckDao().upsert(DayCheck(taskId = taskId, dayNumber = dayNumber, isChecked = checked))
     }
 
+    /**
+     * Flips whatever is currently in the database, rather than trusting a
+     * checked/unchecked value computed earlier (e.g. by the widget, which
+     * can only render a snapshot and may be toggled before it's refreshed).
+     */
+    suspend fun toggleChecked(taskId: Long, dayNumber: Int) {
+        val current = db.dayCheckDao().find(taskId, dayNumber)?.isChecked ?: false
+        db.dayCheckDao().upsert(DayCheck(taskId = taskId, dayNumber = dayNumber, isChecked = !current))
+    }
+
     companion object {
         val DEFAULT_TASKS = listOf(
             "Workout for 45 minutes",

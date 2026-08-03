@@ -12,10 +12,9 @@ class ToggleTaskAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val taskId = parameters[taskIdKey] ?: return
         val dayNumber = parameters[dayNumberKey] ?: return
-        val newChecked = parameters[newCheckedKey] ?: return
 
         val repository = ChallengeRepository(AppDatabase.getInstance(context))
-        repository.setChecked(taskId, dayNumber, newChecked)
+        repository.toggleChecked(taskId, dayNumber)
 
         ChallengeWidget().updateAll(context)
     }
