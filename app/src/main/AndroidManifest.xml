@@ -22,7 +22,7 @@
         </activity>
 
         <receiver
-            android:name=".widget.ChallengeWidgetReceiver"
+            android:name=".widget.ChallengeWidgetProvider"
             android:exported="true"
             android:label="@string/widget_label">
             <intent-filter>
