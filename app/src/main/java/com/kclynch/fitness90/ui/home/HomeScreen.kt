@@ -31,7 +31,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -42,8 +44,10 @@ import com.kclynch.fitness90.data.ChecklistTask
 import com.kclynch.fitness90.ui.components.ChecklistItemRow
 import com.kclynch.fitness90.ui.components.ConfirmDeleteDialog
 import com.kclynch.fitness90.ui.components.CountdownCard
+import com.kclynch.fitness90.ui.components.DayCompleteCelebration
 import com.kclynch.fitness90.ui.components.DayPickerRow
 import com.kclynch.fitness90.ui.components.TaskEditDialog
+import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -56,108 +60,132 @@ fun HomeScreen(state: ChallengeUiState.Active, viewModel: ChallengeViewModel) {
     var deletingTask by remember { mutableStateOf<ChecklistTask?>(null) }
     var showMenu by remember { mutableStateOf(false) }
     var showChangeDateDialog by remember { mutableStateOf(false) }
+    var showCelebration by remember { mutableStateOf(false) }
+    var celebrationKey by remember { mutableIntStateOf(0) }
 
     val dateFormatter = remember { DateTimeFormatter.ofPattern("EEEE, MMM d") }
     val selectedDate = remember(state.startDate, state.selectedDay) {
         state.startDate.plusDays((state.selectedDay - 1).toLong())
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("90 Day Challenge") },
-                actions = {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Filled.MoreVert, contentDescription = "More options")
-                    }
-                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                        DropdownMenuItem(
-                            text = { Text("Change start date") },
-                            onClick = {
-                                showMenu = false
-                                showChangeDateDialog = true
-                            }
-                        )
-                    }
-                }
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "Add checklist item")
-            }
+    LaunchedEffect(viewModel) {
+        viewModel.dayCompletedEvents.collect {
+            celebrationKey++
+            showCelebration = true
         }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-        ) {
-            CountdownCard(
-                startDate = state.startDate,
-                endDate = state.endDate,
-                totalDays = state.totalDays,
-                todayDayNumber = state.todayDayNumber,
-                daysRemaining = state.daysRemaining,
-                isFinished = state.isFinished
-            )
+    }
 
-            Spacer(modifier = Modifier.height(16.dp))
+    LaunchedEffect(showCelebration) {
+        if (showCelebration) {
+            delay(2000)
+            showCelebration = false
+        }
+    }
 
-            DayPickerRow(
-                totalDays = state.totalDays,
-                selectedDay = state.selectedDay,
-                todayDayNumber = state.todayDayNumber,
-                dayProgress = state.dayProgress,
-                onDaySelected = viewModel::selectDay
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Day ${state.selectedDay} · ${selectedDate.format(dateFormatter)}",
-                    style = MaterialTheme.typography.titleMedium
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("90 Day Challenge") },
+                    actions = {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = "More options")
+                        }
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Change start date") },
+                                onClick = {
+                                    showMenu = false
+                                    showChangeDateDialog = true
+                                }
+                            )
+                        }
+                    }
                 )
-                if (state.selectedDay != state.todayDayNumber) {
-                    TextButton(onClick = { viewModel.jumpToToday() }) {
-                        Icon(Icons.Filled.Today, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
-                        Text("Today")
-                    }
+            },
+            floatingActionButton = {
+                FloatingActionButton(onClick = { showAddDialog = true }) {
+                    Icon(Icons.Filled.Add, contentDescription = "Add checklist item")
                 }
             }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp)
+            ) {
+                CountdownCard(
+                    startDate = state.startDate,
+                    endDate = state.endDate,
+                    totalDays = state.totalDays,
+                    todayDayNumber = state.todayDayNumber,
+                    daysRemaining = state.daysRemaining,
+                    isFinished = state.isFinished
+                )
 
-            Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            if (state.tasks.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                DayPickerRow(
+                    totalDays = state.totalDays,
+                    selectedDay = state.selectedDay,
+                    todayDayNumber = state.todayDayNumber,
+                    dayProgress = state.dayProgress,
+                    onDaySelected = viewModel::selectDay
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = "No checklist items yet. Tap + to add your first one.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "Day ${state.selectedDay} · ${selectedDate.format(dateFormatter)}",
+                        style = MaterialTheme.typography.titleMedium
                     )
+                    if (state.selectedDay != state.todayDayNumber) {
+                        TextButton(onClick = { viewModel.jumpToToday() }) {
+                            Icon(Icons.Filled.Today, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
+                            Text("Today")
+                        }
+                    }
                 }
-            } else {
-                LazyColumn(contentPadding = PaddingValues(bottom = 80.dp)) {
-                    items(state.tasks, key = { it.id }) { task ->
-                        ChecklistItemRow(
-                            task = task,
-                            isChecked = state.checkedTaskIds.contains(task.id),
-                            onCheckedChange = { checked ->
-                                viewModel.toggleTask(task.id, state.selectedDay, checked)
-                            },
-                            onEdit = { editingTask = task },
-                            onDelete = { deletingTask = task }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (state.tasks.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "No checklist items yet. Tap + to add your first one.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                } else {
+                    LazyColumn(contentPadding = PaddingValues(bottom = 80.dp)) {
+                        items(state.tasks, key = { it.id }) { task ->
+                            ChecklistItemRow(
+                                task = task,
+                                isChecked = state.checkedTaskIds.contains(task.id),
+                                onCheckedChange = { checked ->
+                                    viewModel.toggleTask(task.id, state.selectedDay, checked)
+                                },
+                                onEdit = { editingTask = task },
+                                onDelete = { deletingTask = task }
+                            )
+                        }
                     }
                 }
             }
         }
+
+        DayCompleteCelebration(
+            visible = showCelebration,
+            key = celebrationKey,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 
     if (showAddDialog) {

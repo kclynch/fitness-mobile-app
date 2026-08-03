@@ -8,9 +8,12 @@ import com.kclynch.fitness90.data.ChallengeDates
 import com.kclynch.fitness90.data.ChallengeRepository
 import com.kclynch.fitness90.data.ChecklistTask
 import com.kclynch.fitness90.widget.WidgetUpdater
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -41,6 +44,9 @@ class ChallengeViewModel(application: Application) : AndroidViewModel(applicatio
 
     // null means "follow today" until the user explicitly picks a day.
     private val selectedDayOverride = MutableStateFlow<Int?>(null)
+
+    private val _dayCompletedEvents = MutableSharedFlow<Int>(extraBufferCapacity = 1)
+    val dayCompletedEvents: SharedFlow<Int> = _dayCompletedEvents.asSharedFlow()
 
     val uiState: StateFlow<ChallengeUiState> = combine(
         repository.challenge,
@@ -104,6 +110,12 @@ class ChallengeViewModel(application: Application) : AndroidViewModel(applicatio
     fun toggleTask(taskId: Long, dayNumber: Int, checked: Boolean) {
         viewModelScope.launch {
             repository.setChecked(taskId, dayNumber, checked)
+            // checked == true only happens on the unchecked -> checked
+            // transition (re-tapping an already-checked box sends false),
+            // so this is exactly the moment a day can newly become complete.
+            if (checked && repository.isDayComplete(dayNumber)) {
+                _dayCompletedEvents.emit(dayNumber)
+            }
             WidgetUpdater.refresh(getApplication())
         }
     }

@@ -50,6 +50,13 @@ class ChallengeRepository(private val db: AppDatabase) {
         db.dayCheckDao().upsert(DayCheck(taskId = taskId, dayNumber = dayNumber, isChecked = checked))
     }
 
+    suspend fun isDayComplete(dayNumber: Int): Boolean {
+        val totalTasks = db.taskDao().observeTasks().first().size
+        if (totalTasks == 0) return false
+        val checkedCount = db.dayCheckDao().observeChecksForDay(dayNumber).first().count { it.isChecked }
+        return checkedCount >= totalTasks
+    }
+
     /**
      * Flips whatever is currently in the database, rather than trusting a
      * checked/unchecked value computed earlier (e.g. by the widget, which
