@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">90 Day Challenge</string>
+    <string name="widget_label">90 Day Challenge</string>
+    <string name="widget_description">See today\'s day number and check off your daily list right from the home screen.</string>
 </resources>

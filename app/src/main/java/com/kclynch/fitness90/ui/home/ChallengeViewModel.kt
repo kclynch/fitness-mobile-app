@@ -4,8 +4,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.kclynch.fitness90.data.AppDatabase
+import com.kclynch.fitness90.data.ChallengeDates
 import com.kclynch.fitness90.data.ChallengeRepository
 import com.kclynch.fitness90.data.ChecklistTask
+import com.kclynch.fitness90.widget.WidgetUpdater
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +15,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 
 data class DayProgress(val dayNumber: Int, val completed: Int, val total: Int)
 
@@ -50,20 +51,8 @@ class ChallengeViewModel(application: Application) : AndroidViewModel(applicatio
         if (challenge == null) {
             ChallengeUiState.NotStarted
         } else {
-            val startDate = LocalDate.ofEpochDay(challenge.startEpochDay)
-            val endDate = startDate.plusDays((challenge.totalDays - 1).toLong())
-            val today = LocalDate.now()
-
-            val rawDayNumber = ChronoUnit.DAYS.between(startDate, today).toInt() + 1
-            val todayDayNumber = rawDayNumber.coerceIn(1, challenge.totalDays)
-            val isFinished = today.isAfter(endDate)
-            val daysRemaining = if (isFinished) {
-                0
-            } else {
-                ChronoUnit.DAYS.between(today, endDate).toInt().coerceAtLeast(0)
-            }
-
-            val selectedDay = (override ?: todayDayNumber).coerceIn(1, challenge.totalDays)
+            val status = ChallengeDates.status(challenge)
+            val selectedDay = (override ?: status.todayDayNumber).coerceIn(1, challenge.totalDays)
 
             val checksByDay = checks.groupBy { it.dayNumber }
             val dayProgress = (1..challenge.totalDays).associateWith { day ->
@@ -76,12 +65,12 @@ class ChallengeViewModel(application: Application) : AndroidViewModel(applicatio
                 .toSet()
 
             ChallengeUiState.Active(
-                startDate = startDate,
-                endDate = endDate,
+                startDate = status.startDate,
+                endDate = status.endDate,
                 totalDays = challenge.totalDays,
-                todayDayNumber = todayDayNumber,
-                daysRemaining = daysRemaining,
-                isFinished = isFinished,
+                todayDayNumber = status.todayDayNumber,
+                daysRemaining = status.daysRemaining,
+                isFinished = status.isFinished,
                 selectedDay = selectedDay,
                 tasks = tasks,
                 checkedTaskIds = checkedTaskIds,
@@ -91,11 +80,17 @@ class ChallengeViewModel(application: Application) : AndroidViewModel(applicatio
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ChallengeUiState.Loading)
 
     fun startChallenge(startDate: LocalDate) {
-        viewModelScope.launch { repository.startChallenge(startDate) }
+        viewModelScope.launch {
+            repository.startChallenge(startDate)
+            WidgetUpdater.refresh(getApplication())
+        }
     }
 
     fun updateStartDate(startDate: LocalDate) {
-        viewModelScope.launch { repository.updateStartDate(startDate) }
+        viewModelScope.launch {
+            repository.updateStartDate(startDate)
+            WidgetUpdater.refresh(getApplication())
+        }
     }
 
     fun selectDay(day: Int) {
@@ -107,18 +102,30 @@ class ChallengeViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun toggleTask(taskId: Long, dayNumber: Int, checked: Boolean) {
-        viewModelScope.launch { repository.setChecked(taskId, dayNumber, checked) }
+        viewModelScope.launch {
+            repository.setChecked(taskId, dayNumber, checked)
+            WidgetUpdater.refresh(getApplication())
+        }
     }
 
     fun addTask(title: String) {
-        viewModelScope.launch { repository.addTask(title) }
+        viewModelScope.launch {
+            repository.addTask(title)
+            WidgetUpdater.refresh(getApplication())
+        }
     }
 
     fun renameTask(task: ChecklistTask, newTitle: String) {
-        viewModelScope.launch { repository.renameTask(task, newTitle) }
+        viewModelScope.launch {
+            repository.renameTask(task, newTitle)
+            WidgetUpdater.refresh(getApplication())
+        }
     }
 
     fun deleteTask(task: ChecklistTask) {
-        viewModelScope.launch { repository.deleteTask(task) }
+        viewModelScope.launch {
+            repository.deleteTask(task)
+            WidgetUpdater.refresh(getApplication())
+        }
     }
 }
