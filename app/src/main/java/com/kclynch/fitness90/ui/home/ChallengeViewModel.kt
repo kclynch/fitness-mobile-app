@@ -7,6 +7,8 @@ import com.kclynch.fitness90.data.AppDatabase
 import com.kclynch.fitness90.data.ChallengeDates
 import com.kclynch.fitness90.data.ChallengeRepository
 import com.kclynch.fitness90.data.ChecklistTask
+import com.kclynch.fitness90.data.DayCompletionCategory
+import com.kclynch.fitness90.data.completionCategory
 import com.kclynch.fitness90.widget.WidgetUpdater
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +36,8 @@ sealed interface ChallengeUiState {
         val selectedDay: Int,
         val tasks: List<ChecklistTask>,
         val checkedTaskIds: Set<Long>,
-        val dayProgress: Map<Int, DayProgress>
+        val dayProgress: Map<Int, DayProgress>,
+        val categoryCounts: Map<DayCompletionCategory, Int>
     ) : ChallengeUiState
 }
 
@@ -70,6 +73,13 @@ class ChallengeViewModel(application: Application) : AndroidViewModel(applicatio
                 .map { it.taskId }
                 .toSet()
 
+            // Only days that have already ended can be scored (you can't
+            // know what got "missed" while a day is still in progress).
+            val categoryCounts = (1 until status.todayDayNumber)
+                .mapNotNull { day -> dayProgress[day]?.let { completionCategory(it.completed, it.total) } }
+                .groupingBy { it }
+                .eachCount()
+
             ChallengeUiState.Active(
                 startDate = status.startDate,
                 endDate = status.endDate,
@@ -80,7 +90,8 @@ class ChallengeViewModel(application: Application) : AndroidViewModel(applicatio
                 selectedDay = selectedDay,
                 tasks = tasks,
                 checkedTaskIds = checkedTaskIds,
-                dayProgress = dayProgress
+                dayProgress = dayProgress,
+                categoryCounts = categoryCounts
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ChallengeUiState.Loading)

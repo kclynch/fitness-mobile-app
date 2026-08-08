@@ -44,6 +44,7 @@ import com.kclynch.fitness90.data.ChecklistTask
 import com.kclynch.fitness90.ui.components.ChecklistItemRow
 import com.kclynch.fitness90.ui.components.ConfirmDeleteDialog
 import com.kclynch.fitness90.ui.components.CountdownCard
+import com.kclynch.fitness90.ui.components.DayCategorySummary
 import com.kclynch.fitness90.ui.components.DayCompleteCelebration
 import com.kclynch.fitness90.ui.components.DayPickerRow
 import com.kclynch.fitness90.ui.components.TaskEditDialog
@@ -133,6 +134,11 @@ fun HomeScreen(state: ChallengeUiState.Active, viewModel: ChallengeViewModel) {
                     dayProgress = state.dayProgress,
                     onDaySelected = viewModel::selectDay
                 )
+
+                if (state.categoryCounts.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    DayCategorySummary(counts = state.categoryCounts, modifier = Modifier.fillMaxWidth())
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
