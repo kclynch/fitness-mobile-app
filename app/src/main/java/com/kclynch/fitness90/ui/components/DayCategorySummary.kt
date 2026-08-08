@@ -88,8 +88,8 @@ private fun CategoryStat(label: String, count: Int, color: Color, showStar: Bool
                 Icon(
                     imageVector = Icons.Filled.Star,
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(16.dp)
+                    tint = Color(0xFFFFD700),
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }

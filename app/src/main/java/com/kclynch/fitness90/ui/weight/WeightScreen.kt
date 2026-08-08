@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kclynch.fitness90.ui.components.LogWeightDialog
 import com.kclynch.fitness90.ui.components.WeightLineChart
@@ -58,18 +59,27 @@ fun WeightScreen(viewModel: WeightViewModel) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = {
-                logDialogInitialDate = LocalDate.now()
-                showLogDialog = true
-            }) {
-                Text("Log Today's Weight")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = {
+                    logDialogInitialDate = LocalDate.now()
+                    showLogDialog = true
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Log Today", maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            OutlinedButton(onClick = {
-                logDialogInitialDate = LocalDate.now()
-                showLogDialog = true
-            }) {
-                Text("Log / Edit a Date")
+            OutlinedButton(
+                onClick = {
+                    logDialogInitialDate = LocalDate.now()
+                    showLogDialog = true
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Edit a Date", maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
 

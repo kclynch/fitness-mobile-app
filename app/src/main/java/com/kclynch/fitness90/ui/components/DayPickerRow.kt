@@ -28,6 +28,8 @@ import com.kclynch.fitness90.data.DayCompletionCategory
 import com.kclynch.fitness90.data.completionCategory
 import com.kclynch.fitness90.ui.home.DayProgress
 
+private val GoldStar = Color(0xFFFFD700)
+
 @Composable
 fun DayPickerRow(
     totalDays: Int,
@@ -74,6 +76,7 @@ fun DayPickerRow(
             }
             val contentColor = when {
                 category == DayCompletionCategory.YELLOW -> Color.Black
+                category == DayCompletionCategory.PERFECT -> Color.Black
                 category != null -> Color.White
                 isSelected -> MaterialTheme.colorScheme.onPrimary
                 else -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -92,22 +95,20 @@ fun DayPickerRow(
                     .border(width = borderWidth, color = MaterialTheme.colorScheme.primary, shape = CircleShape)
                     .clickable { onDaySelected(day) }
             ) {
-                Text(
-                    text = day.toString(),
-                    color = contentColor,
-                    fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
-                    style = MaterialTheme.typography.bodyMedium
-                )
                 if (category == DayCompletionCategory.PERFECT) {
                     Icon(
                         imageVector = Icons.Filled.Star,
                         contentDescription = "Perfect day",
-                        tint = Color.White,
-                        modifier = Modifier
-                            .size(14.dp)
-                            .align(Alignment.TopEnd)
+                        tint = GoldStar,
+                        modifier = Modifier.size(34.dp)
                     )
                 }
+                Text(
+                    text = day.toString(),
+                    color = contentColor,
+                    fontWeight = if (isSelected || isToday || category != null) FontWeight.Bold else FontWeight.Normal,
+                    style = MaterialTheme.typography.bodyMedium
+                )
                 if (isPartial) {
                     Box(
                         modifier = Modifier
