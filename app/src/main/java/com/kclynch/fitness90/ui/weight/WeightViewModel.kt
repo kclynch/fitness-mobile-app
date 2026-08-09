@@ -1,6 +1,8 @@
 package com.kclynch.fitness90.ui.weight
 
 import android.app.Application
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.kclynch.fitness90.data.WeightDatabase
@@ -26,8 +28,22 @@ class WeightViewModel(application: Application) : AndroidViewModel(application) 
 
     private val repository = WeightRepository(WeightDatabase.getInstance(application))
 
-    private val rangeStart = MutableStateFlow(LocalDate.now().minusDays(29))
-    private val rangeEnd = MutableStateFlow(LocalDate.now())
+    // Plain in-memory state doesn't survive the app's process being killed
+    // in the background, which reads as "the range keeps resetting" even
+    // though nothing was wrong within a single session. Persisting the two
+    // dates to SharedPreferences makes the choice stick until the user
+    // actually changes it.
+    private val prefs: SharedPreferences =
+        application.getSharedPreferences("weight_prefs", Context.MODE_PRIVATE)
+
+    private val rangeStart = MutableStateFlow(
+        LocalDate.ofEpochDay(
+            prefs.getLong(KEY_RANGE_START, LocalDate.now().minusDays(29).toEpochDay())
+        )
+    )
+    private val rangeEnd = MutableStateFlow(
+        LocalDate.ofEpochDay(prefs.getLong(KEY_RANGE_END, LocalDate.now().toEpochDay()))
+    )
 
     val uiState: StateFlow<WeightUiState> = combine(
         repository.allEntries,
@@ -59,12 +75,17 @@ class WeightViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun setRange(start: LocalDate, end: LocalDate) {
-        if (start.isAfter(end)) {
-            rangeStart.value = end
-            rangeEnd.value = start
-        } else {
-            rangeStart.value = start
-            rangeEnd.value = end
-        }
+        val (newStart, newEnd) = if (start.isAfter(end)) end to start else start to end
+        rangeStart.value = newStart
+        rangeEnd.value = newEnd
+        prefs.edit()
+            .putLong(KEY_RANGE_START, newStart.toEpochDay())
+            .putLong(KEY_RANGE_END, newEnd.toEpochDay())
+            .apply()
+    }
+
+    private companion object {
+        const val KEY_RANGE_START = "range_start_epoch_day"
+        const val KEY_RANGE_END = "range_end_epoch_day"
     }
 }
