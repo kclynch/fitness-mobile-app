@@ -71,7 +71,17 @@ class WeightViewModel(application: Application) : AndroidViewModel(application) 
     )
 
     fun logWeight(date: LocalDate, weightLbs: Float) {
-        viewModelScope.launch { repository.logWeight(date, weightLbs) }
+        viewModelScope.launch {
+            repository.logWeight(date, weightLbs)
+            // The saved range is a fixed pair of dates, not a rolling
+            // "last 30 days" — so it goes stale as real time passes and a
+            // freshly logged entry (today's, most commonly) can land
+            // outside it. Widen the range just enough to show it.
+            when {
+                date.isAfter(rangeEnd.value) -> setRange(rangeStart.value, date)
+                date.isBefore(rangeStart.value) -> setRange(date, rangeEnd.value)
+            }
+        }
     }
 
     fun setRange(start: LocalDate, end: LocalDate) {
