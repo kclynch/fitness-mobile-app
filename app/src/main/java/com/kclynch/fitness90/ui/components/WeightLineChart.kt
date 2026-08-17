@@ -1,30 +1,39 @@
 package com.kclynch.fitness90.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.kclynch.fitness90.data.DayCompletionCategory
 import com.kclynch.fitness90.data.WeightEntry
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+
+private val PerfectDotGold = Color(0xFFFFD700)
 
 @Composable
 fun WeightLineChart(
     entries: List<WeightEntry>,
     rangeStart: LocalDate,
     rangeEnd: LocalDate,
+    dayCategoryInRange: Map<LocalDate, DayCompletionCategory> = emptyMap(),
+    showDayQuality: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val lineColor = MaterialTheme.colorScheme.primary
@@ -59,7 +68,12 @@ fun WeightLineChart(
                 .fillMaxWidth()
                 .weight(1f)
         ) {
-            val gridYs = listOf(0f, 0.5f, 1f).map { size.height * (1f - it) }
+            // Reserve a thin strip at the bottom for the day-quality dots
+            // so they don't sit on top of the weight line itself.
+            val stripHeight = if (showDayQuality) 16.dp.toPx() else 0f
+            val plotHeight = size.height - stripHeight
+
+            val gridYs = listOf(0f, 0.5f, 1f).map { plotHeight * (1f - it) }
             gridYs.forEach { y ->
                 drawLine(
                     color = gridColor,
@@ -69,11 +83,15 @@ fun WeightLineChart(
                 )
             }
 
+            val xForDate = { date: LocalDate ->
+                val xFraction = (ChronoUnit.DAYS.between(rangeStart, date).toFloat() / totalDaySpan).coerceIn(0f, 1f)
+                xFraction * size.width
+            }
+
             val points = entries.map { entry ->
                 val date = LocalDate.ofEpochDay(entry.epochDay)
-                val xFraction = (ChronoUnit.DAYS.between(rangeStart, date).toFloat() / totalDaySpan).coerceIn(0f, 1f)
                 val yFraction = ((entry.weightLbs - minWeight) / weightSpan).coerceIn(0f, 1f)
-                Offset(x = xFraction * size.width, y = size.height - yFraction * size.height)
+                Offset(x = xForDate(date), y = plotHeight - yFraction * plotHeight)
             }
 
             for (i in 0 until points.size - 1) {
@@ -87,6 +105,18 @@ fun WeightLineChart(
             }
             points.forEach { point ->
                 drawCircle(color = lineColor, radius = 4.dp.toPx(), center = point)
+            }
+
+            if (showDayQuality) {
+                val stripY = plotHeight + stripHeight / 2f
+                dayCategoryInRange.forEach { (date, category) ->
+                    val dotColor = if (category == DayCompletionCategory.PERFECT) {
+                        PerfectDotGold
+                    } else {
+                        category.color()
+                    }
+                    drawCircle(color = dotColor, radius = 5.dp.toPx(), center = Offset(xForDate(date), stripY))
+                }
             }
         }
         Text(
@@ -106,5 +136,28 @@ fun WeightLineChart(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        if (showDayQuality) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                DayQualityLegendItem("Perfect", PerfectDotGold)
+                DayQualityLegendItem("Missed 1", DayCompletionCategory.GREEN.color())
+                DayQualityLegendItem("Missed 2-3", DayCompletionCategory.YELLOW.color())
+                DayQualityLegendItem("Missed 4+", DayCompletionCategory.RED.color())
+            }
+        }
+    }
+}
+
+@Composable
+private fun DayQualityLegendItem(label: String, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.size(8.dp).background(color, CircleShape))
+        Text(
+            text = " $label",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

@@ -5,9 +5,15 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.kclynch.fitness90.data.AppDatabase
+import com.kclynch.fitness90.data.ChallengeDates
+import com.kclynch.fitness90.data.ChallengeRepository
+import com.kclynch.fitness90.data.DayCompletionCategory
 import com.kclynch.fitness90.data.WeightDatabase
 import com.kclynch.fitness90.data.WeightEntry
 import com.kclynch.fitness90.data.WeightRepository
+import com.kclynch.fitness90.data.completionCategory
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,12 +27,19 @@ data class WeightUiState(
     val rangeStart: LocalDate = LocalDate.now().minusDays(29),
     val rangeEnd: LocalDate = LocalDate.now(),
     val entriesInRange: List<WeightEntry> = emptyList(),
-    val weightChangeInRange: Float? = null
+    val weightChangeInRange: Float? = null,
+    val dayCategoryInRange: Map<LocalDate, DayCompletionCategory> = emptyMap()
 )
 
 class WeightViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = WeightRepository(WeightDatabase.getInstance(application))
+
+    // Read-only reuse of the challenge data, purely to correlate day
+    // quality with weight on the graph — this doesn't touch the challenge
+    // database's schema, so it carries none of the migration risk that
+    // kept weight tracking in its own separate database.
+    private val challengeRepository = ChallengeRepository(AppDatabase.getInstance(application))
 
     // Plain in-memory state doesn't survive the app's process being killed
     // in the background, which reads as "the range keeps resetting" even
@@ -45,24 +58,45 @@ class WeightViewModel(application: Application) : AndroidViewModel(application) 
         LocalDate.ofEpochDay(prefs.getLong(KEY_RANGE_END, LocalDate.now().toEpochDay()))
     )
 
+    private val dayCategoryByDate: Flow<Map<LocalDate, DayCompletionCategory>> = combine(
+        challengeRepository.challenge,
+        challengeRepository.tasks,
+        challengeRepository.allChecks
+    ) { challenge, tasks, checks ->
+        if (challenge == null) {
+            emptyMap()
+        } else {
+            val status = ChallengeDates.status(challenge)
+            val checksByDay = checks.groupBy { it.dayNumber }
+            (1 until status.todayDayNumber).mapNotNull { day ->
+                val completed = checksByDay[day].orEmpty().count { it.isChecked }
+                val category = completionCategory(completed, tasks.size) ?: return@mapNotNull null
+                status.startDate.plusDays((day - 1).toLong()) to category
+            }.toMap()
+        }
+    }
+
     val uiState: StateFlow<WeightUiState> = combine(
         repository.allEntries,
         rangeStart,
-        rangeEnd
-    ) { entries, start, end ->
+        rangeEnd,
+        dayCategoryByDate
+    ) { entries, start, end, categoryByDate ->
         val sorted = entries.sortedBy { it.epochDay }
         val inRange = sorted.filter {
             val date = LocalDate.ofEpochDay(it.epochDay)
             !date.isBefore(start) && !date.isAfter(end)
         }
         val change = if (inRange.size >= 2) inRange.last().weightLbs - inRange.first().weightLbs else null
+        val categoriesInRange = categoryByDate.filterKeys { !it.isBefore(start) && !it.isAfter(end) }
 
         WeightUiState(
             allEntries = sorted,
             rangeStart = start,
             rangeEnd = end,
             entriesInRange = inRange,
-            weightChangeInRange = change
+            weightChangeInRange = change,
+            dayCategoryInRange = categoriesInRange
         )
     }.stateIn(
         viewModelScope,

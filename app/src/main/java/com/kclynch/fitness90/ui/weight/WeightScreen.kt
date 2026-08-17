@@ -15,9 +15,11 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -44,6 +46,7 @@ fun WeightScreen(viewModel: WeightViewModel) {
     var logDialogInitialDate by remember { mutableStateOf(LocalDate.now()) }
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
+    var showDayQuality by remember { mutableStateOf(false) }
 
     val dateFormatter = remember { DateTimeFormatter.ofPattern("MMM d, yyyy") }
     val entriesByDate = remember(state.allEntries) {
@@ -135,12 +138,25 @@ fun WeightScreen(viewModel: WeightViewModel) {
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Show day quality on graph", style = MaterialTheme.typography.bodyMedium)
+            Switch(checked = showDayQuality, onCheckedChange = { showDayQuality = it })
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
 
         WeightLineChart(
             entries = state.entriesInRange,
             rangeStart = state.rangeStart,
             rangeEnd = state.rangeEnd,
+            dayCategoryInRange = state.dayCategoryInRange,
+            showDayQuality = showDayQuality,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
