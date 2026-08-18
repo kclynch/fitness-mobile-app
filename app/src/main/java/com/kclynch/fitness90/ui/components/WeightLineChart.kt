@@ -25,7 +25,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
-private val PerfectDotGold = Color(0xFFFFD700)
+private val PerfectColor = Color(0xFFFFD700)
 
 @Composable
 fun WeightLineChart(
@@ -68,12 +68,7 @@ fun WeightLineChart(
                 .fillMaxWidth()
                 .weight(1f)
         ) {
-            // Reserve a thin strip at the bottom for the day-quality dots
-            // so they don't sit on top of the weight line itself.
-            val stripHeight = if (showDayQuality) 16.dp.toPx() else 0f
-            val plotHeight = size.height - stripHeight
-
-            val gridYs = listOf(0f, 0.5f, 1f).map { plotHeight * (1f - it) }
+            val gridYs = listOf(0f, 0.5f, 1f).map { size.height * (1f - it) }
             gridYs.forEach { y ->
                 drawLine(
                     color = gridColor,
@@ -91,12 +86,21 @@ fun WeightLineChart(
             val points = entries.map { entry ->
                 val date = LocalDate.ofEpochDay(entry.epochDay)
                 val yFraction = ((entry.weightLbs - minWeight) / weightSpan).coerceIn(0f, 1f)
-                Offset(x = xForDate(date), y = plotHeight - yFraction * plotHeight)
+                Offset(x = xForDate(date), y = size.height - yFraction * size.height)
             }
 
             for (i in 0 until points.size - 1) {
+                // The segment running right from a given day's point takes
+                // that day's quality color, up until the next point.
+                val segmentDate = LocalDate.ofEpochDay(entries[i].epochDay)
+                val category = if (showDayQuality) dayCategoryInRange[segmentDate] else null
+                val segmentColor = when (category) {
+                    DayCompletionCategory.PERFECT -> PerfectColor
+                    null -> lineColor
+                    else -> category.color()
+                }
                 drawLine(
-                    color = lineColor,
+                    color = segmentColor,
                     start = points[i],
                     end = points[i + 1],
                     strokeWidth = 3.dp.toPx(),
@@ -105,18 +109,6 @@ fun WeightLineChart(
             }
             points.forEach { point ->
                 drawCircle(color = lineColor, radius = 4.dp.toPx(), center = point)
-            }
-
-            if (showDayQuality) {
-                val stripY = plotHeight + stripHeight / 2f
-                dayCategoryInRange.forEach { (date, category) ->
-                    val dotColor = if (category == DayCompletionCategory.PERFECT) {
-                        PerfectDotGold
-                    } else {
-                        category.color()
-                    }
-                    drawCircle(color = dotColor, radius = 5.dp.toPx(), center = Offset(xForDate(date), stripY))
-                }
             }
         }
         Text(
@@ -141,7 +133,7 @@ fun WeightLineChart(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                DayQualityLegendItem("Perfect", PerfectDotGold)
+                DayQualityLegendItem("Perfect", PerfectColor)
                 DayQualityLegendItem("Missed 1", DayCompletionCategory.GREEN.color())
                 DayQualityLegendItem("Missed 2-3", DayCompletionCategory.YELLOW.color())
                 DayQualityLegendItem("Missed 4+", DayCompletionCategory.RED.color())
