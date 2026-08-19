@@ -25,8 +25,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
-private val PerfectColor = Color(0xFFFFD700)
-
 @Composable
 fun WeightLineChart(
     entries: List<WeightEntry>,
@@ -94,11 +92,7 @@ fun WeightLineChart(
                 // that day's quality color, up until the next point.
                 val segmentDate = LocalDate.ofEpochDay(entries[i].epochDay)
                 val category = if (showDayQuality) dayCategoryInRange[segmentDate] else null
-                val segmentColor = when (category) {
-                    DayCompletionCategory.PERFECT -> PerfectColor
-                    null -> lineColor
-                    else -> category.color()
-                }
+                val segmentColor = category?.color() ?: lineColor
                 drawLine(
                     color = segmentColor,
                     start = points[i],
@@ -133,8 +127,7 @@ fun WeightLineChart(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                DayQualityLegendItem("Perfect", PerfectColor)
-                DayQualityLegendItem("Missed 1", DayCompletionCategory.GREEN.color())
+                DayQualityLegendItem("0-1 missed", DayCompletionCategory.GREEN.color())
                 DayQualityLegendItem("Missed 2-3", DayCompletionCategory.YELLOW.color())
                 DayQualityLegendItem("Missed 4+", DayCompletionCategory.RED.color())
             }
